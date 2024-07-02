@@ -1,18 +1,18 @@
-from common import ScanMode, ScanResult
-
-import cv2
 import difflib
 import functools
 import json
 import logging
-import numpy
-import pytesseract
 import random
 import typing
 import unicodedata
-
-from PIL import Image
+from pathlib import Path
 from typing import Dict, Iterator, List, Set, Tuple
+
+import cv2
+import numpy
+import pytesseract
+from common import ScanMode, ScanResult
+from PIL import Image
 
 # The expected color for the video background.
 TOP_COLOR = (110, 233, 238)
@@ -50,6 +50,8 @@ SCRIPT_MAP: Dict[str, List[str]] = {
     "Hangul": ["ko-kr"],
     "Latin": ["en-us", "en-eu", "fr-eu", "fr-us", "de-eu", "es-eu", "es-us", "it-eu", "nl-eu"],
 }
+
+ASSET_PATH = Path(__file__).parent.parent / "assets"
 
 
 def detect(frame: numpy.ndarray) -> bool:
@@ -305,8 +307,7 @@ def _cleanup_name(item_name: str, lang: str) -> str:
 @functools.lru_cache(maxsize=None)
 def _get_item_db(locale: str) -> Set[str]:
     """Fetches the item database for a given locale, with caching."""
-    with open("items/%s.json" % locale, encoding="utf-8") as fp:
-        return set(json.load(fp))
+    return set(json.loads((ASSET_PATH / f"items/{locale}.json").read_text(encoding="utf-8")))
 
 
 def _detect_locale(item_rows: List[numpy.ndarray], locale: str) -> str:

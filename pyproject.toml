@@ -12,6 +12,8 @@ imagehash = "^4.3.1"
 absl-py = "^2.1.0"
 pytesseract = "^0.3.10"
 protobuf = "^5.27.2"
+opencv-python = "^4.10.0.84"
+opencv-contrib-python = "^4.10.0.84"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.4.2"
@@ -20,6 +22,10 @@ isort = "^5.13.2"
 mypy = "^1.10.1"
 ipdb = "^0.13.13"
 pre-commit = "^3.7.1"
+
+
+[tool.poetry.group.types.dependencies]
+types-pillow = "^10.2.0.20240520"
 
 [build-system]
 requires = ["poetry-core"]
@@ -43,3 +49,8 @@ python_version = "3.12"
 show_error_codes = true
 pretty = true
 strict = true
+exclude = ["catalogscanner/variations/*"]
+
+[[tool.mypy.overrides]]
+module = ["pytesseract"]
+ignore_missing_imports = true

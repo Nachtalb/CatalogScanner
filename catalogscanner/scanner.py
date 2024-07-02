@@ -1,18 +1,15 @@
-from common import ScanResult
+import argparse
+import logging
 from typing import Any, Dict
 
 import catalog
 import critters
+import cv2
 import music
 import reactions
 import recipes
 import storage
-
-import cv2
-
-from absl import app
-from absl import flags
-from absl import logging
+from common import ScanResult
 
 SCANNERS: Dict[str, Any] = {
     "catalog": catalog,
@@ -23,15 +20,7 @@ SCANNERS: Dict[str, Any] = {
     "storage": storage,
 }
 
-FLAGS = flags.FLAGS
-flags.DEFINE_enum("locale", "auto", list(catalog.LOCALE_MAP), "The locale to use for parsing item names.")
-flags.DEFINE_bool("for_sale", False, "If true, the scanner will skip items that are not for sale.")
-flags.DEFINE_enum(
-    "mode",
-    "auto",
-    ["auto"] + list(SCANNERS),
-    "The type of catalog to scan. Auto tries to detect from the media frames.",
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 def scan_media(filename: str, mode: str = "auto", locale: str = "auto", for_sale: bool = False) -> ScanResult:
@@ -73,25 +62,32 @@ def _detect_media_type(filename: str) -> str:
     raise AssertionError("Media is not showing a known scan type.")
 
 
-def main(argv):
-    if len(argv) > 1:
-        media_file = argv[1]
-    elif FLAGS.mode == "recipes":
-        media_file = "examples/recipes.mp4"
-    elif FLAGS.mode == "critters":
-        media_file = "examples/critters.mp4"
-    elif FLAGS.mode == "reactions":
-        media_file = "examples/reactions.jpg"
-    elif FLAGS.mode == "music":
-        media_file = "examples/music.mp4"
-    else:
-        media_file = "examples/catalog.mp4"
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Item scanner configuration")
+    parser.add_argument("media", help="The media file to scan.")
+
+    parser.add_argument(
+        "--locale", choices=list(catalog.LOCALE_MAP), default="auto", help="The locale to use for parsing item names."
+    )
+
+    parser.add_argument(
+        "--for-sale", action="store_true", help="If true, the scanner will skip items that are not for sale."
+    )
+
+    parser.add_argument(
+        "--mode",
+        choices=["auto"] + list(SCANNERS),
+        default="auto",
+        help="The type of catalog to scan. Auto tries to detect from the media frames.",
+    )
+
+    args = parser.parse_args()
 
     result = scan_media(
-        media_file,
-        mode=FLAGS.mode,
-        locale=FLAGS.locale,
-        for_sale=FLAGS.for_sale,
+        args.media,
+        mode=args.mode,
+        locale=args.locale,
+        for_sale=args.for_sale,
     )
 
     result_count, result_mode = len(result.items), result.mode.name.lower()
@@ -100,4 +96,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    app.run(main)
+    main()

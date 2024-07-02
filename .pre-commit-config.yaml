@@ -45,10 +45,9 @@ repos:
       - id: mypy
         args: ["--config-file=pyproject.toml"]
         additional_dependencies:
-          - python-telegram-bot[all]
-          - types-tabulate
-          - twikit
-          - aiohttp[speedups]
+          - types-pillow
+          - opencv-python
+          - imagehash
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v4.0.0-alpha.8
     hooks:

@@ -1,0 +1,14 @@
+tesseract
+tesseract-data-chi_sim
+tesseract-data-chi_tra
+tesseract-data-deu
+tesseract-data-eng
+tesseract-data-fra
+tesseract-data-ita
+tesseract-data-jpn
+tesseract-data-kor
+tesseract-data-lat
+tesseract-data-nld
+tesseract-data-osd
+tesseract-data-rus
+tesseract-data-spa

@@ -18,7 +18,7 @@ def detect(frame: numpy.ndarray) -> bool:
     return numpy.linalg.norm(color - BG_COLOR) < 5
 
 
-def scan(video_file: str, locale: str = 'en-us') -> ScanResult:
+def scan(video_file: str, locale: str = "en-us") -> ScanResult:
     """Scans a video of scrolling through storage returns all items found."""
     item_images = parse_video(video_file)
     item_names = match_items(item_images)
@@ -27,7 +27,7 @@ def scan(video_file: str, locale: str = 'en-us') -> ScanResult:
     return ScanResult(
         mode=ScanMode.STORAGE,
         items=results,
-        locale=locale.replace('auto', 'en-us'),
+        locale=locale.replace("auto", "en-us"),
     )
 
 
@@ -64,8 +64,7 @@ def _read_frames(filename: str) -> Iterator[numpy.ndarray]:
         if not ret:
             break  # Video is over
 
-        assert frame.shape[:2] == (720, 1280), \
-            'Invalid resolution: {1}x{0}'.format(*frame.shape)
+        assert frame.shape[:2] == (720, 1280), "Invalid resolution: {1}x{0}".format(*frame.shape)
 
         if not detect(frame):
             continue  # Skip frames that are not showing storage.
@@ -82,7 +81,7 @@ def _parse_frame(frame: numpy.ndarray) -> Iterator[List[numpy.ndarray]]:
 
     cols = []
     for x in x_positions[1:]:
-        empty_col = gray[:, x-10:x+10]
+        empty_col = gray[:, x - 10 : x + 10]
         if empty_col.min() < 200:
             continue  # Skip columns with occlusions
         cols.append(empty_col)
@@ -99,11 +98,11 @@ def _parse_frame(frame: numpy.ndarray) -> Iterator[List[numpy.ndarray]]:
         if y + 127 > frame.shape[0]:
             continue  # Past the bottom of the frame.
         # Skip row when tooltip is overlapping the item.
-        tooltip = cv2.inRange(frame[y+122:y+127, :], (160, 195, 80), (180, 205, 100))
+        tooltip = cv2.inRange(frame[y + 122 : y + 127, :], (160, 195, 80), (180, 205, 100))
         if tooltip.mean() > 10:
             continue
 
-        yield [frame[y+13:y+113, x+16:x+116] for x in x_positions]
+        yield [frame[y + 13 : y + 113, x + 16 : x + 116] for x in x_positions]
 
 
 def _is_duplicate_row(all_rows: List[numpy.ndarray], new_row: List[numpy.ndarray]) -> bool:
@@ -139,5 +138,5 @@ def _remove_blanks(all_icons: List[numpy.ndarray]) -> List[numpy.ndarray]:
 
 
 if __name__ == "__main__":
-    results = scan('examples/storage.mp4')
-    print('\n'.join(results.items))
+    results = scan("examples/storage.mp4")
+    print("\n".join(results.items))

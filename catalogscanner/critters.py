@@ -21,8 +21,8 @@ class CritterType(enum.Enum):
     SEA_CREATURES = 3
 
     @classmethod
-    def from_str(cls, value: str) -> 'CritterType':
-        key = value.upper().replace(' ', '_')
+    def from_str(cls, value: str) -> "CritterType":
+        key = value.upper().replace(" ", "_")
         return cls.__members__[key]
 
 
@@ -30,18 +30,19 @@ class CritterImage:
     """The image and data associated with a critter icon."""
 
     def __init__(self, critter_name: str, critter_type: CritterType, icon_name: str):
-        img_path = os.path.join('critters', 'generated', icon_name)
+        img_path = os.path.join("critters", "generated", icon_name)
         self.img = cv2.imread(img_path)
         self.critter_name = critter_name
         self.critter_type = critter_type
         self.icon_name = icon_name
 
     def __repr__(self):
-        return f'CritterIcon({self.critter_name!r}, {self.critter_type!r}, {self.icon_name!r})'
+        return f"CritterIcon({self.critter_name!r}, {self.critter_type!r}, {self.icon_name!r})"
 
 
 class CritterIcon(numpy.ndarray):
     """Dummy ndarray subclass to hold critter type info."""
+
     critter_type: CritterType
 
 
@@ -51,7 +52,7 @@ def detect(frame: numpy.ndarray) -> bool:
     return numpy.linalg.norm(color - BG_COLOR) < 5
 
 
-def scan(video_file: str, locale: str = 'en-us') -> ScanResult:
+def scan(video_file: str, locale: str = "en-us") -> ScanResult:
     """Scans a video of scrolling through Critterpedia and returns all critters found."""
     critter_icons = parse_video(video_file)
     critter_names = match_critters(critter_icons)
@@ -60,7 +61,7 @@ def scan(video_file: str, locale: str = 'en-us') -> ScanResult:
     return ScanResult(
         mode=ScanMode.CRITTERS,
         items=results,
-        locale=locale.replace('auto', 'en-us'),
+        locale=locale.replace("auto", "en-us"),
     )
 
 
@@ -75,10 +76,8 @@ def parse_video(filename: str) -> List[CritterIcon]:
             critter_icon.critter_type = critter_type
             all_icons.append(critter_icon)
 
-    assert section_count[CritterType.INSECTS] != 1, \
-        'Incomplete critter scan for INSECTS section.'
-    assert section_count[CritterType.FISH] != 1, \
-        'Incomplete critter scan for FISH section.'
+    assert section_count[CritterType.INSECTS] != 1, "Incomplete critter scan for INSECTS section."
+    assert section_count[CritterType.FISH] != 1, "Incomplete critter scan for FISH section."
 
     return _remove_blanks(all_icons)
 
@@ -95,11 +94,11 @@ def match_critters(critter_icons: List[CritterIcon]) -> List[str]:
 
 def translate_names(critter_names: List[str], locale: str) -> List[str]:
     """Translates a list of critter names to the given locale."""
-    if locale in ['auto', 'en-us']:
+    if locale in ["auto", "en-us"]:
         return critter_names
 
-    translation_path = os.path.join('critters', 'translations.json')
-    with open(translation_path, encoding='utf-8') as fp:
+    translation_path = os.path.join("critters", "translations.json")
+    with open(translation_path, encoding="utf-8") as fp:
         translations = json.load(fp)
     return [translations[name][locale] for name in critter_names]
 
@@ -125,8 +124,7 @@ def _read_frames(filename: str) -> Iterator[Tuple[CritterType, numpy.ndarray]]:
         if frame.shape[:2] == (1080, 1920):
             frame = cv2.resize(frame, (1280, 720))
 
-        assert frame.shape[:2] == (720, 1280), \
-            'Invalid resolution: {1}x{0}'.format(*frame.shape)
+        assert frame.shape[:2] == (720, 1280), "Invalid resolution: {1}x{0}".format(*frame.shape)
 
         if not detect(frame):
             continue  # Skip frames that are not showing critterpedia.
@@ -134,10 +132,10 @@ def _read_frames(filename: str) -> Iterator[Tuple[CritterType, numpy.ndarray]]:
         # Detect a dark line that shows up only in Pictures Mode.
         mode_detector = frame[20:24, 600:800].mean(axis=(0, 1))
         if numpy.linalg.norm(mode_detector - (199, 234, 237)) > 50:
-            raise AssertionError('Critterpedia is in Pictures Mode.')
+            raise AssertionError("Critterpedia is in Pictures Mode.")
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        if filename.endswith('.jpg'):  # Handle screenshots
+        if filename.endswith(".jpg"):  # Handle screenshots
             yield _detect_critter_section(gray), frame[149:623, :]
             continue
 
@@ -173,7 +171,7 @@ def _detect_critter_section(gray_frame: numpy.ndarray) -> CritterType:
         section_icon = gray_frame[70:75, start_x:end_x]
         if section_icon.min() > 150:
             return critter_type
-    raise AssertionError('Invalid Critterpedia page')
+    raise AssertionError("Invalid Critterpedia page")
 
 
 def _parse_frame(frame: numpy.ndarray) -> Iterator[numpy.ndarray]:
@@ -185,7 +183,7 @@ def _parse_frame(frame: numpy.ndarray) -> Iterator[numpy.ndarray]:
     rows = []
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     for y_pos, offset in itertools.product(y_positions, y_offsets):
-        line = gray[y_pos + offset - 3:y_pos + offset + 3, :]
+        line = gray[y_pos + offset - 3 : y_pos + offset + 3, :]
         if line.min() < 170 or line.max() > 240:
             continue
         rows.append(line)
@@ -206,7 +204,7 @@ def _parse_frame(frame: numpy.ndarray) -> Iterator[numpy.ndarray]:
     for x, y in itertools.product(x_positions, y_positions):
         if x + 96 > frame.shape[1]:
             continue  # Past the right side of the frame
-        yield frame[y+8:y+88, x+16:x+96]
+        yield frame[y + 8 : y + 88, x + 16 : x + 96]
 
 
 def _remove_blanks(all_icons: List[CritterIcon]) -> List[CritterIcon]:
@@ -222,7 +220,7 @@ def _remove_blanks(all_icons: List[CritterIcon]) -> List[CritterIcon]:
 @functools.lru_cache()
 def _get_critter_db() -> Dict[CritterType, List[CritterImage]]:
     """Fetches the critters database for a given locale, with caching."""
-    with open(os.path.join('critters', 'names.json')) as fp:
+    with open(os.path.join("critters", "names.json")) as fp:
         critter_data = json.load(fp)
 
     critter_db = collections.defaultdict(list)
@@ -256,5 +254,5 @@ def _find_best_match(icon: numpy.ndarray, critters: List[CritterImage]) -> Critt
 
 
 if __name__ == "__main__":
-    results = scan('examples/critters.mp4')
-    print('\n'.join(results.items))
+    results = scan("examples/critters.mp4")
+    print("\n".join(results.items))

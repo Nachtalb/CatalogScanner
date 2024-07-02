@@ -16,8 +16,8 @@ KITCHEN_COLOR = (160, 163, 243)
 
 # Items that look very alike and can be mixed up.
 CONFUSED_ITEMS = {
-    'concrete pillar': 'marble pillar',
-    'marble pillar': 'concrete pillar',
+    "concrete pillar": "marble pillar",
+    "marble pillar": "concrete pillar",
 }
 
 
@@ -25,26 +25,26 @@ class RecipeCard:
     """The image and data associated with a given recipe."""
 
     def __init__(self, item_name, filename, color_id):
-        img_path = os.path.join('recipes', 'generated', filename)
+        img_path = os.path.join("recipes", "generated", filename)
         self.img = cv2.imread(img_path)
         self.name = item_name
         self.color_id = color_id
 
     def __repr__(self):
-        return f'RecipeCard({self.name!r}, {self.color_id!r})'
+        return f"RecipeCard({self.name!r}, {self.color_id!r})"
 
 
 def detect(frame: numpy.ndarray) -> bool:
     """Detects if a given frame is showing DIY recipes."""
     color = frame[:20, 1200:1240].mean(axis=(0, 1))
     if numpy.linalg.norm(color - WOOD_COLOR) < 10:
-        raise AssertionError('Workbench scanning is not supported.')
+        raise AssertionError("Workbench scanning is not supported.")
     if numpy.linalg.norm(color - KITCHEN_COLOR) < 10:
-        raise AssertionError('Kitchen scanning is not supported.')
+        raise AssertionError("Kitchen scanning is not supported.")
     return numpy.linalg.norm(color - BG_COLOR) < 10
 
 
-def scan(video_file: str, locale: str = 'en-us') -> ScanResult:
+def scan(video_file: str, locale: str = "en-us") -> ScanResult:
     """Scans a video of scrolling through recipes list and returns all recipes found."""
     recipe_cards = parse_video(video_file)
     recipe_names = match_recipes(recipe_cards)
@@ -53,7 +53,7 @@ def scan(video_file: str, locale: str = 'en-us') -> ScanResult:
     return ScanResult(
         mode=ScanMode.RECIPES,
         items=results,
-        locale=locale.replace('auto', 'en-us'),
+        locale=locale.replace("auto", "en-us"),
     )
 
 
@@ -94,11 +94,11 @@ def match_recipes(recipe_cards: List[numpy.ndarray]) -> List[str]:
 
 def translate_names(recipe_names: List[str], locale: str) -> List[str]:
     """Translates a list of recipe names to the given locale."""
-    if locale in ['auto', 'en-us']:
+    if locale in ["auto", "en-us"]:
         return recipe_names
 
-    translation_path = os.path.join('recipes', 'translations.json')
-    with open(translation_path, encoding='utf-8') as fp:
+    translation_path = os.path.join("recipes", "translations.json")
+    with open(translation_path, encoding="utf-8") as fp:
         translations = json.load(fp)
     return [translations[name][locale] for name in recipe_names]
 
@@ -111,8 +111,7 @@ def _read_frames(filename: str) -> Iterable[numpy.ndarray]:
         if not ret:
             break  # Video is over
 
-        assert frame.shape[:2] == (720, 1280), \
-            'Invalid resolution: {1}x{0}'.format(*frame.shape)
+        assert frame.shape[:2] == (720, 1280), "Invalid resolution: {1}x{0}".format(*frame.shape)
 
         if not detect(frame):
             continue  # Skip frames that are not showing recipes.
@@ -147,10 +146,10 @@ def _parse_frame(frame: numpy.ndarray) -> Iterable[List[numpy.ndarray]]:
     for y1 in y_positions:
         row = []
         for x1, x2 in x_positions:
-            card = frame[y1+37:y1+149, x1:x2]
+            card = frame[y1 + 37 : y1 + 149, x1:x2]
             # Detects selected cards, which are bigger, and resizes them.
-            if y1 > 9 and thresh[y1-10:y1-5, x1:x2].mean() < 100:
-                card = frame[y1+22:y1+152, x1-9:x2+9]
+            if y1 > 9 and thresh[y1 - 10 : y1 - 5, x1:x2].mean() < 100:
+                card = frame[y1 + 22 : y1 + 152, x1 - 9 : x2 + 9]
                 card = cv2.resize(card, (112, 112))
             row.append(card)
         yield row
@@ -177,13 +176,15 @@ def _is_duplicate_cards(all_cards: List[numpy.ndarray], new_cards: List[numpy.nd
 @functools.lru_cache()
 def _get_recipe_db() -> Dict[int, List[RecipeCard]]:
     """Fetches the item database for a given locale, with caching."""
-    with open(os.path.join('recipes', 'names.json')) as fp:
+    with open(os.path.join("recipes", "names.json")) as fp:
         recipes_data = json.load(fp)
 
     # Some recipes have alternate images, append those to the list.
     recipes_data.extend(
-        (name, filename.replace('_0_0', '_1_0'), color)
-        for name, filename, color in recipes_data if filename.endswith('_0_0.png'))
+        (name, filename.replace("_0_0", "_1_0"), color)
+        for name, filename, color in recipes_data
+        if filename.endswith("_0_0.png")
+    )
 
     recipe_db = collections.defaultdict(list)
     for item_name, filename, card_color in recipes_data:
@@ -195,10 +196,9 @@ def _get_recipe_db() -> Dict[int, List[RecipeCard]]:
 @functools.lru_cache()
 def _get_color_db() -> Dict[int, Tuple[int, int, int]]:
     """Fetches the item database for a given locale, with caching."""
-    with open(os.path.join('recipes', 'colors.json')) as fp:
+    with open(os.path.join("recipes", "colors.json")) as fp:
         colors_data = json.load(fp)
-    return {int(color_id): (b, g, r)
-            for color_id, (r, g, b) in colors_data.items()}
+    return {int(color_id): (b, g, r) for color_id, (r, g, b) in colors_data.items()}
 
 
 def _get_candidate_recipes(card: numpy.ndarray) -> Iterable[RecipeCard]:
@@ -245,5 +245,5 @@ def _find_best_match(card: numpy.ndarray, recipes: List[RecipeCard]) -> RecipeCa
 
 
 if __name__ == "__main__":
-    results = scan('examples/recipes.mp4')
-    print('\n'.join(results.items))
+    results = scan("examples/recipes.mp4")
+    print("\n".join(results.items))

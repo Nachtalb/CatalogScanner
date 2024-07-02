@@ -27,7 +27,7 @@ class SongCover:
         self.icon_hash = imagehash.hex_to_hash(hash_hex)
 
     def __repr__(self):
-        return f'SongCover({self.song_name!r}, {self.hash_hex!r})'
+        return f"SongCover({self.song_name!r}, {self.hash_hex!r})"
 
 
 def detect(frame: numpy.ndarray) -> bool:
@@ -38,7 +38,7 @@ def detect(frame: numpy.ndarray) -> bool:
     return False
 
 
-def scan(video_file: str, locale: str = 'en-us') -> ScanResult:
+def scan(video_file: str, locale: str = "en-us") -> ScanResult:
     """Scans a video of scrolling through music list and returns all songs found."""
     song_covers = parse_video(video_file)
     song_names = match_songs(song_covers)
@@ -47,7 +47,7 @@ def scan(video_file: str, locale: str = 'en-us') -> ScanResult:
     return ScanResult(
         mode=ScanMode.MUSIC,
         items=results,
-        locale=locale.replace('auto', 'en-us'),
+        locale=locale.replace("auto", "en-us"),
     )
 
 
@@ -76,11 +76,11 @@ def match_songs(song_covers: List[numpy.ndarray]) -> List[str]:
 
 def translate_names(song_names: List[str], locale: str) -> List[str]:
     """Translates a list of song names to the given locale."""
-    if locale in ['auto', 'en-us']:
+    if locale in ["auto", "en-us"]:
         return song_names
 
-    translation_path = os.path.join('music', 'translations.json')
-    with open(translation_path, encoding='utf-8') as fp:
+    translation_path = os.path.join("music", "translations.json")
+    with open(translation_path, encoding="utf-8") as fp:
         translations = json.load(fp)
     return [translations[name][locale] for name in song_names]
 
@@ -93,8 +93,7 @@ def _read_frames(filename: str) -> Iterator[numpy.ndarray]:
         if not ret:
             break  # Video is over
 
-        assert frame.shape[:2] == (720, 1280), \
-            'Invalid resolution: {1}x{0}'.format(*frame.shape)
+        assert frame.shape[:2] == (720, 1280), "Invalid resolution: {1}x{0}".format(*frame.shape)
 
         if not detect(frame):
             continue  # Skip frames that are not showing music list.
@@ -116,7 +115,7 @@ def _parse_frame(frame: numpy.ndarray) -> Iterator[List[numpy.ndarray]]:
     # Detect special case when less than one full row of song covers.
     end_row_color = frame[100:200, 1000:1100].mean(axis=(0, 1))
     if numpy.linalg.norm(end_row_color - bg_color) < 5:
-        yield [frame[15:275, x:x+260] for x in x_positions]
+        yield [frame[15:275, x : x + 260] for x in x_positions]
         return
 
     # This code finds areas of the image that are blue (background color),
@@ -143,7 +142,7 @@ def _parse_frame(frame: numpy.ndarray) -> Iterator[List[numpy.ndarray]]:
     for y in y_positions:
         if y + 260 > frame.shape[0]:
             continue  # Past the bottom of the frame
-        yield [frame[y:y+260, x:x+260] for x in x_positions]
+        yield [frame[y : y + 260, x : x + 260] for x in x_positions]
 
 
 def _is_duplicate_cards(all_covers: List[numpy.ndarray], new_covers: List[numpy.ndarray]) -> bool:
@@ -188,11 +187,11 @@ def _is_background(color: numpy.ndarray) -> bool:
 @functools.lru_cache()
 def _get_song_db() -> List[SongCover]:
     """Fetches the song cover database for a given locale, with caching."""
-    with open(os.path.join('music', 'names.json')) as fp:
+    with open(os.path.join("music", "names.json")) as fp:
         music_data = json.load(fp)
     return [SongCover(*data) for data in music_data]
 
 
 if __name__ == "__main__":
-    results = scan('examples/music.mp4')
-    print('\n'.join(results.items))
+    results = scan("examples/music.mp4")
+    print("\n".join(results.items))

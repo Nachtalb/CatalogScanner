@@ -18,11 +18,50 @@ EMPTY_COLOR = (237, 198, 215)
 
 # The position for all 44 reaction slots, listed manually.
 REACTION_POSITIONS = [
-    (318, 166), (382, 141), (446, 126), (511, 116), (577, 110), (640, 108), (703, 110), (769, 116), (834, 126),
-    (898, 141), (962, 166), (315, 228), (381, 207), (447, 190), (512, 179), (575, 175), (640, 174), (705, 175),
-    (768, 179), (833, 190), (899, 207), (966, 228), (320, 291), (382, 269), (448, 255), (512, 244), (575, 239),
-    (640, 237), (705, 239), (768, 244), (832, 255), (898, 269), (961, 291), (330, 353), (390, 334), (451, 320),
-    (513, 311), (577, 304), (640, 302), (703, 304), (766, 311), (829, 320), (890, 334), (950, 353),
+    (318, 166),
+    (382, 141),
+    (446, 126),
+    (511, 116),
+    (577, 110),
+    (640, 108),
+    (703, 110),
+    (769, 116),
+    (834, 126),
+    (898, 141),
+    (962, 166),
+    (315, 228),
+    (381, 207),
+    (447, 190),
+    (512, 179),
+    (575, 175),
+    (640, 174),
+    (705, 175),
+    (768, 179),
+    (833, 190),
+    (899, 207),
+    (966, 228),
+    (320, 291),
+    (382, 269),
+    (448, 255),
+    (512, 244),
+    (575, 239),
+    (640, 237),
+    (705, 239),
+    (768, 244),
+    (832, 255),
+    (898, 269),
+    (961, 291),
+    (330, 353),
+    (390, 334),
+    (451, 320),
+    (513, 311),
+    (577, 304),
+    (640, 302),
+    (703, 304),
+    (766, 311),
+    (829, 320),
+    (890, 334),
+    (950, 353),
 ]
 
 
@@ -30,13 +69,13 @@ class ReactionImage:
     """The image and data associated with a reaction icon."""
 
     def __init__(self, reaction_name: str, filename: str):
-        img_path = os.path.join('reactions', 'generated', filename)
+        img_path = os.path.join("reactions", "generated", filename)
         self.img = cv2.imread(img_path)
         self.reaction_name = reaction_name
         self.filename = filename
 
     def __repr__(self):
-        return f'ReactionImage({self.reaction_name!r}, {self.filename!r})'
+        return f"ReactionImage({self.reaction_name!r}, {self.filename!r})"
 
 
 def detect(frame: numpy.ndarray) -> bool:
@@ -45,7 +84,7 @@ def detect(frame: numpy.ndarray) -> bool:
     return numpy.linalg.norm(color - BG_COLOR) < 5
 
 
-def scan(image_file: str, locale: str = 'en-us') -> ScanResult:
+def scan(image_file: str, locale: str = "en-us") -> ScanResult:
     """Scans an image of reactions list and returns all reactions found."""
     reaction_icons = parse_image(image_file)
     reaction_names = match_reactions(reaction_icons)
@@ -54,7 +93,7 @@ def scan(image_file: str, locale: str = 'en-us') -> ScanResult:
     return ScanResult(
         mode=ScanMode.REACTIONS,
         items=results,
-        locale=locale.replace('auto', 'en-us'),
+        locale=locale.replace("auto", "en-us"),
     )
 
 
@@ -81,7 +120,7 @@ def parse_image(filename: str) -> List[numpy.ndarray]:
         except AssertionError as e:
             assertion_error = e
 
-    if assertion_error and (filename.endswith('.jpg') or not icon_pages):
+    if assertion_error and (filename.endswith(".jpg") or not icon_pages):
         raise assertion_error
 
     return [icon for page in icon_pages.values() for icon in page]
@@ -99,11 +138,11 @@ def match_reactions(reaction_icons: List[numpy.ndarray]) -> List[str]:
 
 def translate_names(reaction_names: List[str], locale: str) -> List[str]:
     """Translates a list of reaction names to the given locale."""
-    if locale in ['auto', 'en-us']:
+    if locale in ["auto", "en-us"]:
         return reaction_names
 
-    translation_path = os.path.join('reactions', 'translations.json')
-    with open(translation_path, encoding='utf-8') as fp:
+    translation_path = os.path.join("reactions", "translations.json")
+    with open(translation_path, encoding="utf-8") as fp:
         translations = json.load(fp)
     return [translations[name][locale] for name in reaction_names]
 
@@ -112,21 +151,21 @@ def _parse_frame(frame: numpy.ndarray) -> Iterator[numpy.ndarray]:
     """Extracts the individual reaction icons from the frame."""
     for x, y in REACTION_POSITIONS:
         # Skip empty slots.
-        center_color = frame[y-6:y+6, x-6:x+6].mean(axis=(0, 1))
+        center_color = frame[y - 6 : y + 6, x - 6 : x + 6].mean(axis=(0, 1))
         if numpy.linalg.norm(center_color - EMPTY_COLOR) < 10:
             break
         if numpy.linalg.norm(center_color - SELECT_COLOR) < 20:
             break
 
-        icon = frame[y-32:y+32, x-32:x+32]
-        assert icon[34:42, 10:18].mean() < 250, 'Cursor is blocking a reaction.'
-        assert icon[-5:, :, 2].mean() > 200, 'Tooltip is blocking a reaction.'
+        icon = frame[y - 32 : y + 32, x - 32 : x + 32]
+        assert icon[34:42, 10:18].mean() < 250, "Cursor is blocking a reaction."
+        assert icon[-5:, :, 2].mean() > 200, "Tooltip is blocking a reaction."
 
         # If the cursor is hovering on the icon, shrink it to normalize size.
         if icon[-3, -5, 1] > 227:
             icon = cv2.copyMakeBorder(
-                icon, top=8, bottom=8, left=8, right=8,
-                borderType=cv2.BORDER_CONSTANT, value=BG_COLOR)
+                icon, top=8, bottom=8, left=8, right=8, borderType=cv2.BORDER_CONSTANT, value=BG_COLOR
+            )
             icon = cv2.resize(icon, (64, 64))
 
         yield icon
@@ -135,7 +174,7 @@ def _parse_frame(frame: numpy.ndarray) -> Iterator[numpy.ndarray]:
 @functools.lru_cache()
 def _get_reaction_db() -> List[ReactionImage]:
     """Fetches the reaction database for a given locale, with caching."""
-    with open(os.path.join('reactions', 'names.json')) as fp:
+    with open(os.path.join("reactions", "names.json")) as fp:
         reaction_data = json.load(fp)
     return [ReactionImage(name, img) for name, img, _ in reaction_data]
 
@@ -163,5 +202,5 @@ def _find_best_match(icon: numpy.ndarray, reactions: List[ReactionImage]) -> Rea
 
 
 if __name__ == "__main__":
-    results = scan('examples/reactions.jpg')
-    print('\n'.join(results.items))
+    results = scan("examples/reactions.jpg")
+    print("\n".join(results.items))

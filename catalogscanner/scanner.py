@@ -1,15 +1,12 @@
 import argparse
 import logging
+from pathlib import Path
 from typing import Any, Dict
 
-import catalog
-import critters
 import cv2
-import music
-import reactions
-import recipes
-import storage
-from common import ScanResult
+
+from . import catalog, critters, music, reactions, recipes, storage
+from .common import ScanResult
 
 SCANNERS: Dict[str, Any] = {
     "catalog": catalog,
@@ -23,7 +20,8 @@ SCANNERS: Dict[str, Any] = {
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
-def scan_media(filename: str, mode: str = "auto", locale: str = "auto", for_sale: bool = False) -> ScanResult:
+def scan_media(filename: str | Path, mode: str = "auto", locale: str = "auto", for_sale: bool = False) -> ScanResult:
+    filename = str(filename)
     if mode == "auto":
         mode = _detect_media_type(filename)
         logging.info("Detected scan mode: %s", mode)

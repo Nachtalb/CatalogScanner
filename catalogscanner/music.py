@@ -1,20 +1,20 @@
-from common import ScanMode, ScanResult
-from PIL import Image
+import functools
+from typing import Iterator, List
 
 import cv2
-import functools
 import imagehash
-import json
 import numpy
-import os
+from PIL import Image
 
-from typing import Iterator, List
+from .common import ASSET_PATH, ScanMode, ScanResult, read_json_asset
 
 # The expected color for the video background.
 BG_COLOR1 = (240, 210, 100)
 BG_COLOR2 = (226, 119, 79)
 BG_COLOR3 = (49, 60, 102)
 BG_COLOR4 = (83, 117, 173)
+
+MUSIC_PATH = ASSET_PATH / "music"
 
 
 class SongCover:
@@ -79,9 +79,7 @@ def translate_names(song_names: List[str], locale: str) -> List[str]:
     if locale in ["auto", "en-us"]:
         return song_names
 
-    translation_path = os.path.join("music", "translations.json")
-    with open(translation_path, encoding="utf-8") as fp:
-        translations = json.load(fp)
+    translations = read_json_asset(MUSIC_PATH / "translations.json")
     return [translations[name][locale] for name in song_names]
 
 
@@ -187,8 +185,7 @@ def _is_background(color: numpy.ndarray) -> bool:
 @functools.lru_cache()
 def _get_song_db() -> List[SongCover]:
     """Fetches the song cover database for a given locale, with caching."""
-    with open(os.path.join("music", "names.json")) as fp:
-        music_data = json.load(fp)
+    music_data = read_json_asset(MUSIC_PATH / "names.json")
     return [SongCover(*data) for data in music_data]
 
 

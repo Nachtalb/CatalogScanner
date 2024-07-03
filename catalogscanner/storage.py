@@ -1,9 +1,9 @@
-from common import ScanMode, ScanResult
+from typing import Iterator, List
 
 import cv2
 import numpy
 
-from typing import Iterator, List
+from .common import ScanMode, ScanResult
 
 # The expected color for the video background.
 BG_COLOR = (69, 198, 246)

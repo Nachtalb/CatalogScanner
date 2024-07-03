@@ -1,18 +1,18 @@
-import itertools
-from common import ScanMode, ScanResult
-
 import collections
-import cv2
 import enum
 import functools
-import json
-import numpy
-import os
-
+import itertools
 from typing import Dict, Iterator, List, Tuple
+
+import cv2
+import numpy
+
+from .common import ASSET_PATH, ScanMode, ScanResult, read_json_asset
 
 # The expected color for the video background.
 BG_COLOR = numpy.array([207, 238, 240])
+
+CRITTERS_PATH = ASSET_PATH / "critters"
 
 
 class CritterType(enum.Enum):
@@ -30,8 +30,8 @@ class CritterImage:
     """The image and data associated with a critter icon."""
 
     def __init__(self, critter_name: str, critter_type: CritterType, icon_name: str):
-        img_path = os.path.join("critters", "generated", icon_name)
-        self.img = cv2.imread(img_path)
+        img_path = CRITTERS_PATH / "generated" / icon_name
+        self.img = cv2.imread(str(img_path))
         self.critter_name = critter_name
         self.critter_type = critter_type
         self.icon_name = icon_name
@@ -97,9 +97,7 @@ def translate_names(critter_names: List[str], locale: str) -> List[str]:
     if locale in ["auto", "en-us"]:
         return critter_names
 
-    translation_path = os.path.join("critters", "translations.json")
-    with open(translation_path, encoding="utf-8") as fp:
-        translations = json.load(fp)
+    translations = read_json_asset(CRITTERS_PATH / "translations.json")
     return [translations[name][locale] for name in critter_names]
 
 
@@ -220,8 +218,7 @@ def _remove_blanks(all_icons: List[CritterIcon]) -> List[CritterIcon]:
 @functools.lru_cache()
 def _get_critter_db() -> Dict[CritterType, List[CritterImage]]:
     """Fetches the critters database for a given locale, with caching."""
-    with open(os.path.join("critters", "names.json")) as fp:
-        critter_data = json.load(fp)
+    critter_data = read_json_asset(CRITTERS_PATH / "names.json")
 
     critter_db = collections.defaultdict(list)
     for critter_name, icon_name, critter_type_str in critter_data:

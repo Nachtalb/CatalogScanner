@@ -1,13 +1,11 @@
-from common import ScanMode, ScanResult
-
 import collections
-import cv2
 import functools
-import json
-import numpy
-import os
-
 from typing import Dict, Iterable, List, Tuple
+
+import cv2
+import numpy
+
+from .common import ASSET_PATH, ScanMode, ScanResult, read_json_asset
 
 # The expected color for the video background.
 BG_COLOR = (194, 222, 228)
@@ -20,13 +18,15 @@ CONFUSED_ITEMS = {
     "marble pillar": "concrete pillar",
 }
 
+RECIPE_PATH = ASSET_PATH / "recipes"
+
 
 class RecipeCard:
     """The image and data associated with a given recipe."""
 
     def __init__(self, item_name, filename, color_id):
-        img_path = os.path.join("recipes", "generated", filename)
-        self.img = cv2.imread(img_path)
+        img_path = RECIPE_PATH / "generated" / filename
+        self.img = cv2.imread(str(img_path))
         self.name = item_name
         self.color_id = color_id
 
@@ -97,9 +97,7 @@ def translate_names(recipe_names: List[str], locale: str) -> List[str]:
     if locale in ["auto", "en-us"]:
         return recipe_names
 
-    translation_path = os.path.join("recipes", "translations.json")
-    with open(translation_path, encoding="utf-8") as fp:
-        translations = json.load(fp)
+    translations = read_json_asset(RECIPE_PATH / "translations.json")
     return [translations[name][locale] for name in recipe_names]
 
 
@@ -176,8 +174,7 @@ def _is_duplicate_cards(all_cards: List[numpy.ndarray], new_cards: List[numpy.nd
 @functools.lru_cache()
 def _get_recipe_db() -> Dict[int, List[RecipeCard]]:
     """Fetches the item database for a given locale, with caching."""
-    with open(os.path.join("recipes", "names.json")) as fp:
-        recipes_data = json.load(fp)
+    recipes_data = read_json_asset(RECIPE_PATH / "names.json")
 
     # Some recipes have alternate images, append those to the list.
     recipes_data.extend(
@@ -196,8 +193,7 @@ def _get_recipe_db() -> Dict[int, List[RecipeCard]]:
 @functools.lru_cache()
 def _get_color_db() -> Dict[int, Tuple[int, int, int]]:
     """Fetches the item database for a given locale, with caching."""
-    with open(os.path.join("recipes", "colors.json")) as fp:
-        colors_data = json.load(fp)
+    colors_data = read_json_asset(RECIPE_PATH / "colors.json")
     return {int(color_id): (b, g, r) for color_id, (r, g, b) in colors_data.items()}
 
 

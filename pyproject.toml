@@ -27,6 +27,11 @@ pre-commit = "^3.7.1"
 [tool.poetry.group.types.dependencies]
 types-pillow = "^10.2.0.20240520"
 
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.2.2"
+pytest-xdist = "^3.6.1"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
@@ -54,3 +59,12 @@ exclude = ["catalogscanner/variations/*"]
 [[tool.mypy.overrides]]
 module = ["pytesseract"]
 ignore_missing_imports = true
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q -n auto"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

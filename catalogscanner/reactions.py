@@ -1,13 +1,11 @@
-from common import ScanMode, ScanResult
+import functools
+import itertools
+from typing import Dict, Iterator, List, Optional
 
 import cv2
-import itertools
-import functools
-import json
 import numpy
-import os
 
-from typing import Dict, Iterator, List, Optional
+from .common import ASSET_PATH, ScanMode, ScanResult, read_json_asset
 
 # The expected color for the reactions background.
 BG_COLOR = (254, 221, 244)
@@ -65,12 +63,15 @@ REACTION_POSITIONS = [
 ]
 
 
+REACTIONS_PATH = ASSET_PATH / "reactions"
+
+
 class ReactionImage:
     """The image and data associated with a reaction icon."""
 
     def __init__(self, reaction_name: str, filename: str):
-        img_path = os.path.join("reactions", "generated", filename)
-        self.img = cv2.imread(img_path)
+        img_path = REACTIONS_PATH / "generated" / filename
+        self.img = cv2.imread(str(img_path))
         self.reaction_name = reaction_name
         self.filename = filename
 
@@ -141,9 +142,7 @@ def translate_names(reaction_names: List[str], locale: str) -> List[str]:
     if locale in ["auto", "en-us"]:
         return reaction_names
 
-    translation_path = os.path.join("reactions", "translations.json")
-    with open(translation_path, encoding="utf-8") as fp:
-        translations = json.load(fp)
+    translations = read_json_asset(REACTIONS_PATH / "translations.json")
     return [translations[name][locale] for name in reaction_names]
 
 
@@ -174,8 +173,7 @@ def _parse_frame(frame: numpy.ndarray) -> Iterator[numpy.ndarray]:
 @functools.lru_cache()
 def _get_reaction_db() -> List[ReactionImage]:
     """Fetches the reaction database for a given locale, with caching."""
-    with open(os.path.join("reactions", "names.json")) as fp:
-        reaction_data = json.load(fp)
+    reaction_data = read_json_asset(REACTIONS_PATH / "names.json")
     return [ReactionImage(name, img) for name, img, _ in reaction_data]
 
 

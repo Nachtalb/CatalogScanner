@@ -4,7 +4,12 @@ import json
 from pathlib import Path
 from typing import Any, List
 
+import numpy as np
+
 ASSET_PATH = Path(__file__).parent.parent / "assets"
+
+FRAME_TYPE = np.ndarray[Any, np.dtype[np.integer[Any] | np.floating[Any]]]
+NP_BOOL = np.dtype(np.bool)
 
 
 class ScanMode(enum.Enum):

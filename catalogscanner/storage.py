@@ -1,9 +1,10 @@
+from pathlib import Path
 from typing import Iterator, List
 
 import cv2
-import numpy
+import numpy as np
 
-from .common import ScanMode, ScanResult
+from catalogscanner.common import FRAME_TYPE, ScanMode, ScanResult
 
 # The expected color for the video background.
 BG_COLOR = (69, 198, 246)
@@ -12,13 +13,13 @@ BG_COLOR = (69, 198, 246)
 BLANK_COLOR = (192, 230, 242)
 
 
-def detect(frame: numpy.ndarray) -> bool:
+def detect(frame: FRAME_TYPE) -> bool:
     """Detects if a given frame is showing the storage items."""
     color = frame[:20, 1100:1150].mean(axis=(0, 1))
-    return numpy.linalg.norm(color - BG_COLOR) < 5
+    return np.linalg.norm(color - BG_COLOR) < 5  # type: ignore[return-value]
 
 
-def scan(video_file: str, locale: str = "en-us") -> ScanResult:
+def scan(video_file: Path, locale: str = "en-us") -> ScanResult:
     """Scans a video of scrolling through storage returns all items found."""
     item_images = parse_video(video_file)
     item_names = match_items(item_images)
@@ -31,9 +32,9 @@ def scan(video_file: str, locale: str = "en-us") -> ScanResult:
     )
 
 
-def parse_video(filename: str) -> List[numpy.ndarray]:
+def parse_video(filename: Path) -> List[FRAME_TYPE]:
     """Parses a whole video and returns images for all storage items found."""
-    all_rows: List[numpy.ndarray] = []
+    all_rows: List[FRAME_TYPE] = []
     for i, frame in enumerate(_read_frames(filename)):
         if i % 4 != 0:
             continue  # Skip every 4th frame
@@ -44,7 +45,7 @@ def parse_video(filename: str) -> List[numpy.ndarray]:
     return _remove_blanks(all_rows)
 
 
-def match_items(item_images: List[numpy.ndarray]) -> List[str]:
+def match_items(item_images: List[FRAME_TYPE]) -> List[str]:
     """Matches icons against database of item images, finding best matches."""
     # TODO: Implement image to item matching.
     return []
@@ -56,9 +57,9 @@ def translate_names(item_names: List[str], locale: str) -> List[str]:
     return item_names
 
 
-def _read_frames(filename: str) -> Iterator[numpy.ndarray]:
+def _read_frames(filename: Path) -> Iterator[FRAME_TYPE]:
     """Parses frames of the given video and returns the relevant region."""
-    cap = cv2.VideoCapture(filename)
+    cap = cv2.VideoCapture(filename)  # type: ignore[call-overload]
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -74,7 +75,7 @@ def _read_frames(filename: str) -> Iterator[numpy.ndarray]:
     cap.release()
 
 
-def _parse_frame(frame: numpy.ndarray) -> Iterator[List[numpy.ndarray]]:
+def _parse_frame(frame: FRAME_TYPE) -> Iterator[List[FRAME_TYPE]]:
     """Parses an individual frame and extracts cards from the storage."""
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     x_positions = list(range(0, 1056, 132))
@@ -87,25 +88,25 @@ def _parse_frame(frame: numpy.ndarray) -> Iterator[List[numpy.ndarray]]:
         cols.append(empty_col)
 
     thresh = cv2.threshold(cv2.hconcat(cols), 236, 255, 0)[1]
-    separators = list(numpy.nonzero(thresh.mean(axis=1) < 240)[0])
+    separators = list(np.nonzero(thresh.mean(axis=1) < 240)[0])
 
     # Normalize row lines by taking the average of all of them.
     # We know they are 127px apart, so we find the best offset from given lines.
-    centroid = int(numpy.median([s % 127 for s in separators]))
+    centroid = int(np.median([s % 127 for s in separators]))
     y_positions = list(range(centroid, 525, 127))
 
     for y in y_positions:
         if y + 127 > frame.shape[0]:
             continue  # Past the bottom of the frame.
         # Skip row when tooltip is overlapping the item.
-        tooltip = cv2.inRange(frame[y + 122 : y + 127, :], (160, 195, 80), (180, 205, 100))
+        tooltip = cv2.inRange(frame[y + 122 : y + 127, :], (160, 195, 80), (180, 205, 100))  # type: ignore[call-overload]
         if tooltip.mean() > 10:
             continue
 
         yield [frame[y + 13 : y + 113, x + 16 : x + 116] for x in x_positions]
 
 
-def _is_duplicate_row(all_rows: List[numpy.ndarray], new_row: List[numpy.ndarray]) -> bool:
+def _is_duplicate_row(all_rows: List[FRAME_TYPE], new_row: List[FRAME_TYPE]) -> bool:
     """Checks if the new row is the same as the previous seen rows."""
     if not new_row or len(all_rows) < len(new_row):
         return False
@@ -126,17 +127,17 @@ def _is_duplicate_row(all_rows: List[numpy.ndarray], new_row: List[numpy.ndarray
     return False
 
 
-def _remove_blanks(all_icons: List[numpy.ndarray]) -> List[numpy.ndarray]:
+def _remove_blanks(all_icons: List[FRAME_TYPE]) -> List[FRAME_TYPE]:
     """Remove all icons that show empty critter boxes."""
     filtered_icons = []
     for icon in all_icons:
         center_color = icon[40:60, 40:60].mean(axis=(0, 1))
-        if numpy.linalg.norm(center_color - BLANK_COLOR) < 5:
+        if np.linalg.norm(center_color - BLANK_COLOR) < 5:
             continue
         filtered_icons.append(icon)
     return filtered_icons
 
 
 if __name__ == "__main__":
-    results = scan("examples/storage.mp4")
+    results = scan(Path("examples/storage.mp4"))
     print("\n".join(results.items))

@@ -4,14 +4,15 @@ import logging
 import random
 import typing
 import unicodedata
-from typing import Dict, Iterator, List, Set, Tuple
+from pathlib import Path
+from typing import Iterator
 
 import cv2
-import numpy
+import numpy as np
 import pytesseract
 from PIL import Image
 
-from .common import ASSET_PATH, ScanMode, ScanResult, read_json_asset
+from catalogscanner.common import ASSET_PATH, FRAME_TYPE, ScanMode, ScanResult, read_json_asset
 
 # The expected color for the video background.
 TOP_COLOR = (110, 233, 238)
@@ -22,7 +23,7 @@ WARDELL_COLOR = (211, 214, 248)
 NOOK_MILES_COLOR = (243, 207, 200)
 
 # Mapping supported AC:NH locales to tesseract languages.
-LOCALE_MAP: Dict[str, str] = {
+LOCALE_MAP: dict[str, str] = {
     "auto": "auto",  # Automatic detection
     "de-eu": "deu",
     "en-eu": "eng",
@@ -41,7 +42,7 @@ LOCALE_MAP: Dict[str, str] = {
 }
 
 # Mapping of Tesseract scripts to possible locales.
-SCRIPT_MAP: Dict[str, List[str]] = {
+SCRIPT_MAP: dict[str, list[str]] = {
     "Japanese": ["ja-jp"],
     "Cyrillic": ["ru-eu"],
     "HanS": ["zh-cn"],
@@ -53,17 +54,17 @@ SCRIPT_MAP: Dict[str, List[str]] = {
 ITEMS_PATH = ASSET_PATH / "items"
 
 
-def detect(frame: numpy.ndarray) -> bool:
+def detect(frame: FRAME_TYPE) -> bool:
     """Detects if a given frame is showing Nook Shopping catalog."""
     side_color = frame[150:160, -20:].mean(axis=(0, 1))
-    if numpy.linalg.norm(side_color - WARDELL_COLOR) < 10:
+    if np.linalg.norm(side_color - WARDELL_COLOR) < 10:
         raise AssertionError("Wardell catalog is not supported.")
-    if numpy.linalg.norm(side_color - NOOK_MILES_COLOR) < 10:
+    if np.linalg.norm(side_color - NOOK_MILES_COLOR) < 10:
         raise AssertionError("Nook Miles catalog is not supported.")
-    return numpy.linalg.norm(side_color - SIDE_COLOR) < 10
+    return np.linalg.norm(side_color - SIDE_COLOR) < 10  # type: ignore[return-value]
 
 
-def scan(video_file: str, locale: str = "en-us", for_sale: bool = False) -> ScanResult:
+def scan(video_file: Path, locale: str = "en-us", for_sale: bool = False) -> ScanResult:
     """Scans a video of scrolling through a catalog and returns all items found."""
     item_rows = parse_video(video_file, for_sale)
     locale = _detect_locale(item_rows, locale)
@@ -78,11 +79,11 @@ def scan(video_file: str, locale: str = "en-us", for_sale: bool = False) -> Scan
     )
 
 
-def parse_video(filename: str, for_sale: bool = False) -> List[numpy.ndarray]:
+def parse_video(filename: Path, for_sale: bool = False) -> list[FRAME_TYPE]:
     """Parses a whole video and returns an image containing all the items found."""
     unfinished_page = False
     item_scroll_count = 0
-    all_rows: List[numpy.ndarray] = []
+    all_rows: list[FRAME_TYPE] = []
     for i, frame in enumerate(_read_frames(filename)):
         if not unfinished_page and i % 3 != 0:
             continue  # Only parse every third frame (3 frames per page)
@@ -107,7 +108,7 @@ def parse_video(filename: str, for_sale: bool = False) -> List[numpy.ndarray]:
     return _dedupe_rows(all_rows)
 
 
-def run_ocr(item_rows: List[numpy.ndarray], lang: str = "eng") -> Set[str]:
+def run_ocr(item_rows: list[FRAME_TYPE], lang: str = "eng") -> set[str]:
     """Runs tesseract OCR on an image of item names and returns all items found."""
     if not item_rows:
         return set()  # Recursive base case.
@@ -130,7 +131,7 @@ def run_ocr(item_rows: List[numpy.ndarray], lang: str = "eng") -> Set[str]:
     return (clean_names | remaining_names) - {""}
 
 
-def match_items(item_names: Set[str], locale: str = "en-us") -> Tuple[List[str], List[str]]:
+def match_items(item_names: set[str], locale: str = "en-us") -> tuple[list[str], list[str]]:
     """Matches a list of names against a database of items, finding best matches."""
     no_match_items = []
     matched_items = set()
@@ -152,7 +153,7 @@ def match_items(item_names: Set[str], locale: str = "en-us") -> Tuple[List[str],
         ratio = difflib.SequenceMatcher(None, item, matches[0]).ratio()
         logging.debug("Matched %r to %r (%.2f)", item, matches[0], ratio)
 
-        matched_items.add(matches[0])  # type: ignore
+        matched_items.add(matches[0])
 
     if no_match_items:
         logging.warning("Failed to match %d items: %s", len(no_match_items), no_match_items)
@@ -160,10 +161,10 @@ def match_items(item_names: Set[str], locale: str = "en-us") -> Tuple[List[str],
     return sorted(matched_items), no_match_items
 
 
-def _read_frames(filename: str) -> Iterator[numpy.ndarray]:
+def _read_frames(filename: Path) -> Iterator[FRAME_TYPE]:
     """Parses frames of the given video and returns the relevant region in grayscale."""
-    scroll_positions = []
-    cap = cv2.VideoCapture(filename)
+    scroll_positions: list[int] = []
+    cap = cv2.VideoCapture(filename)  # type: ignore[call-overload]
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -179,7 +180,7 @@ def _read_frames(filename: str) -> Iterator[numpy.ndarray]:
 
         # Crop scrollbar region and get scroll position, then warn about bad scrolling.
         scrollbar = gray[160:570, 1235:1245].mean(axis=1)
-        scroll_positions.append(numpy.argmax(scrollbar < 150))
+        scroll_positions.append(np.argmax(scrollbar < 150))  # type: ignore[arg-type]
         if _is_inconsistent_scroll(scroll_positions):
             raise AssertionError("Video is scrolling inconsistently.")
 
@@ -188,7 +189,7 @@ def _read_frames(filename: str) -> Iterator[numpy.ndarray]:
     cap.release()
 
 
-def _parse_frame(frame: numpy.ndarray, for_sale: bool) -> Iterator[numpy.ndarray]:
+def _parse_frame(frame: FRAME_TYPE, for_sale: bool) -> Iterator[FRAME_TYPE]:
     """Parses an individual frame and extracts item rows from the list."""
     # Detect the dashed lines and iterate over pairs of dashed lines
     # Last line has dashes after but first line doesn't have dashes before,
@@ -199,9 +200,9 @@ def _parse_frame(frame: numpy.ndarray, for_sale: bool) -> Iterator[numpy.ndarray
 
     # Normalize row lines by taking the average of all of them.
     # We know they are 53.45px apart, so we find the best offset from given lines.
-    centers = [numpy.fmod(y, 53.45) for y in y_lines]
-    centroid = round(numpy.median(centers))
-    y_positions = numpy.arange(centroid, 480, 53.45).astype(int)
+    centers = [np.fmod(y, 53.45) for y in y_lines]
+    centroid = round(np.median(centers))
+    y_positions = np.arange(centroid, 480, 53.45).astype(int)
 
     for y in y_positions:
         if y < 40:
@@ -218,7 +219,7 @@ def _parse_frame(frame: numpy.ndarray, for_sale: bool) -> Iterator[numpy.ndarray
         yield row[:, :415]  # Return the name region
 
 
-def _is_duplicate_rows(all_rows: List[numpy.ndarray], new_rows: List[numpy.ndarray]) -> bool:
+def _is_duplicate_rows(all_rows: list[FRAME_TYPE], new_rows: list[FRAME_TYPE]) -> bool:
     """Checks if the new set of rows are the same as the previous seen rows."""
     if not len(all_rows) > len(new_rows) > 4:
         return False
@@ -227,10 +228,10 @@ def _is_duplicate_rows(all_rows: List[numpy.ndarray], new_rows: List[numpy.ndarr
     old_concat = cv2.vconcat(all_rows[-5:-2])
     new_concat = cv2.vconcat(new_rows[-5:-2])
     diff = cv2.absdiff(old_concat, new_concat)
-    return diff.mean() < 4
+    return diff.mean() < 4  # type: ignore[no-any-return]
 
 
-def _is_item_scroll(all_rows: List[numpy.ndarray], new_rows: List[numpy.ndarray]) -> bool:
+def _is_item_scroll(all_rows: list[FRAME_TYPE], new_rows: list[FRAME_TYPE]) -> bool:
     """Checks whether the video is item scrolling instead of page scrolling."""
     if len(all_rows) < 3 or len(new_rows) < 3:
         return False
@@ -243,18 +244,18 @@ def _is_item_scroll(all_rows: List[numpy.ndarray], new_rows: List[numpy.ndarray]
     return False
 
 
-def _is_inconsistent_scroll(scroll_positions: List[int]) -> bool:
+def _is_inconsistent_scroll(scroll_positions: list[int]) -> bool:
     """Detect when the user is not scrolling in a consistent direction."""
-    scroll_deltas = typing.cast(numpy.ndarray, numpy.diff(scroll_positions))
-    downscroll_count = numpy.count_nonzero(scroll_deltas > 0)
-    upscroll_count = numpy.count_nonzero(scroll_deltas < 0)
+    scroll_deltas = typing.cast(FRAME_TYPE, np.diff(scroll_positions))
+    downscroll_count = np.count_nonzero(scroll_deltas > 0)
+    upscroll_count = np.count_nonzero(scroll_deltas < 0)
     return downscroll_count > 10 and upscroll_count > 10
 
 
-def _dedupe_rows(all_rows: List[numpy.ndarray]) -> List[numpy.ndarray]:
+def _dedupe_rows(all_rows: list[FRAME_TYPE]) -> list[FRAME_TYPE]:
     """Dedupe rows by using image hashing and remove blank rows."""
-    row_set: Set[str] = set()
-    deduped_rows: List[numpy.ndarray] = []
+    row_set: set[str] = set()
+    deduped_rows: list[FRAME_TYPE] = []
     for row in all_rows:
         if row.min() > 150:
             continue  # Blank row
@@ -304,12 +305,12 @@ def _cleanup_name(item_name: str, lang: str) -> str:
 
 
 @functools.lru_cache(maxsize=None)
-def _get_item_db(locale: str) -> Set[str]:
+def _get_item_db(locale: str) -> set[str]:
     """Fetches the item database for a given locale, with caching."""
     return set(read_json_asset(ITEMS_PATH / f"{locale}.json"))
 
 
-def _detect_locale(item_rows: List[numpy.ndarray], locale: str) -> str:
+def _detect_locale(item_rows: list[FRAME_TYPE], locale: str) -> str:
     """Detects the right locale for the given items if required."""
     if locale != "auto":
         # If locale is already specified, return as is.
@@ -321,7 +322,7 @@ def _detect_locale(item_rows: List[numpy.ndarray], locale: str) -> str:
     image = Image.fromarray(cv2.vconcat(item_rows))
 
     try:
-        osd_data = typing.cast(Dict[str, str], pytesseract.image_to_osd(image, output_type=pytesseract.Output.DICT))
+        osd_data = typing.cast(dict[str, str], pytesseract.image_to_osd(image, output_type=pytesseract.Output.DICT))
     except pytesseract.TesseractError:
         return "en-us"
 
@@ -338,7 +339,7 @@ def _detect_locale(item_rows: List[numpy.ndarray], locale: str) -> str:
         item_rows = random.sample(item_rows, 30)
     item_names = run_ocr(item_rows, lang="script/Latin")
 
-    def match_score_func(locale):
+    def match_score_func(locale: str) -> int:
         """Computes how many items match for a given locale."""
         item_db = _get_item_db(locale)
         return sum(name in item_db for name in item_names)
@@ -349,5 +350,5 @@ def _detect_locale(item_rows: List[numpy.ndarray], locale: str) -> str:
 
 
 if __name__ == "__main__":
-    results = scan("examples/catalog.mp4")
+    results = scan(Path("./tests/assets/input/catalog.mp4"))
     print("\n".join(results.items))

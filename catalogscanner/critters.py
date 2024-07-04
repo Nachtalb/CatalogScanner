@@ -2,15 +2,16 @@ import collections
 import enum
 import functools
 import itertools
+from pathlib import Path
 from typing import Dict, Iterator, List, Tuple
 
 import cv2
-import numpy
+import numpy as np
 
-from .common import ASSET_PATH, ScanMode, ScanResult, read_json_asset
+from catalogscanner.common import ASSET_PATH, FRAME_TYPE, ScanMode, ScanResult, read_json_asset
 
 # The expected color for the video background.
-BG_COLOR = numpy.array([207, 238, 240])
+BG_COLOR = np.array([207, 238, 240])
 
 CRITTERS_PATH = ASSET_PATH / "critters"
 
@@ -29,30 +30,30 @@ class CritterType(enum.Enum):
 class CritterImage:
     """The image and data associated with a critter icon."""
 
-    def __init__(self, critter_name: str, critter_type: CritterType, icon_name: str):
+    def __init__(self, critter_name: str, critter_type: CritterType, icon_name: str) -> None:
         img_path = CRITTERS_PATH / "generated" / icon_name
         self.img = cv2.imread(str(img_path))
         self.critter_name = critter_name
         self.critter_type = critter_type
         self.icon_name = icon_name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"CritterIcon({self.critter_name!r}, {self.critter_type!r}, {self.icon_name!r})"
 
 
-class CritterIcon(numpy.ndarray):
+class CritterIcon(FRAME_TYPE):
     """Dummy ndarray subclass to hold critter type info."""
 
     critter_type: CritterType
 
 
-def detect(frame: numpy.ndarray) -> bool:
+def detect(frame: FRAME_TYPE) -> bool:
     """Detects if a given frame is showing Critterpedia."""
     color = frame[:20, 1100:1150].mean(axis=(0, 1))
-    return numpy.linalg.norm(color - BG_COLOR) < 5
+    return np.linalg.norm(color - BG_COLOR) < 5  # type: ignore[return-value]
 
 
-def scan(video_file: str, locale: str = "en-us") -> ScanResult:
+def scan(video_file: Path, locale: str = "en-us") -> ScanResult:
     """Scans a video of scrolling through Critterpedia and returns all critters found."""
     critter_icons = parse_video(video_file)
     critter_names = match_critters(critter_icons)
@@ -65,7 +66,7 @@ def scan(video_file: str, locale: str = "en-us") -> ScanResult:
     )
 
 
-def parse_video(filename: str) -> List[CritterIcon]:
+def parse_video(filename: Path) -> List[CritterIcon]:
     """Parses a whole video and returns icons for all critters found."""
     all_icons: List[CritterIcon] = []
     section_count: Dict[CritterType, int] = collections.defaultdict(int)
@@ -101,15 +102,15 @@ def translate_names(critter_names: List[str], locale: str) -> List[str]:
     return [translations[name][locale] for name in critter_names]
 
 
-def _read_frames(filename: str) -> Iterator[Tuple[CritterType, numpy.ndarray]]:
+def _read_frames(filename: Path) -> Iterator[Tuple[CritterType, FRAME_TYPE]]:
     """Parses frames of the given video and returns the relevant region."""
     frame_skip = 0
     last_section = None
     last_frame = None
 
-    good_frames: Dict[Tuple[CritterType, int], numpy.ndarray] = {}
+    good_frames: Dict[Tuple[CritterType, int], FRAME_TYPE] = {}
 
-    cap = cv2.VideoCapture(filename)
+    cap = cv2.VideoCapture(filename)  # type: ignore[call-overload]
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -129,11 +130,11 @@ def _read_frames(filename: str) -> Iterator[Tuple[CritterType, numpy.ndarray]]:
 
         # Detect a dark line that shows up only in Pictures Mode.
         mode_detector = frame[20:24, 600:800].mean(axis=(0, 1))
-        if numpy.linalg.norm(mode_detector - (199, 234, 237)) > 50:
+        if np.linalg.norm(mode_detector - (199, 234, 237)) > 50:
             raise AssertionError("Critterpedia is in Pictures Mode.")
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        if filename.endswith(".jpg"):  # Handle screenshots
+        if filename.suffix == ".jpg":  # Handle screenshots
             yield _detect_critter_section(gray), frame[149:623, :]
             continue
 
@@ -163,7 +164,7 @@ def _read_frames(filename: str) -> Iterator[Tuple[CritterType, numpy.ndarray]]:
         yield critter_type, frame[149:623, :]
 
 
-def _detect_critter_section(gray_frame: numpy.ndarray) -> CritterType:
+def _detect_critter_section(gray_frame: FRAME_TYPE) -> CritterType:
     for i, critter_type in enumerate(CritterType):
         start_x, end_x = 65 + i * 65, 65 + (i + 1) * 65
         section_icon = gray_frame[70:75, start_x:end_x]
@@ -172,9 +173,9 @@ def _detect_critter_section(gray_frame: numpy.ndarray) -> CritterType:
     raise AssertionError("Invalid Critterpedia page")
 
 
-def _parse_frame(frame: numpy.ndarray) -> Iterator[numpy.ndarray]:
+def _parse_frame(frame: FRAME_TYPE) -> Iterator[FRAME_TYPE]:
     """Parses an individual frame and extracts icons from the Critterpedia page."""
-    # Start/end verical position for the 5 grid rows.
+    # Start/end vertical position for the 5 grid rows.
     y_positions = [0, 95, 190, 285, 379]
     y_offsets = [5, 89]
 
@@ -195,9 +196,9 @@ def _parse_frame(frame: numpy.ndarray) -> Iterator[numpy.ndarray]:
 
     # Normalize column lines by taking the average of all of them.
     # We know they are 112.7px apart, so we find the best offset from given lines.
-    centers = [numpy.fmod(x, 112.7) for x in x_lines]
-    centroid = round(numpy.median(centers))
-    x_positions = numpy.arange(centroid, 1280, 112.7).astype(int)
+    centers = [np.fmod(x, 112.7) for x in x_lines]
+    centroid = round(np.median(centers))
+    x_positions = np.arange(centroid, 1280, 112.7).astype(int)
 
     for x, y in itertools.product(x_positions, y_positions):
         if x + 96 > frame.shape[1]:
@@ -228,28 +229,28 @@ def _get_critter_db() -> Dict[CritterType, List[CritterImage]]:
     return critter_db
 
 
-def _find_best_match(icon: numpy.ndarray, critters: List[CritterImage]) -> CritterImage:
+def _find_best_match(icon: FRAME_TYPE, critters: List[CritterImage]) -> CritterImage:
     """Finds the closest matching critter for the given icon."""
-    fast_similarity_metric = lambda r: cv2.absdiff(icon, r.img).mean()
+    fast_similarity_metric = lambda r: cv2.absdiff(icon, r.img).mean()  # noqa: E731
     similarities = list(map(fast_similarity_metric, critters))
-    sim1, sim2 = numpy.partition(similarities, kth=2)[:2]
+    sim1, sim2 = np.partition(similarities, kth=2)[:2]
 
     # If the match seems obvious, return the quick result.
     if abs(sim1 - sim2) > 3:
-        return critters[numpy.argmin(similarities)]
+        return critters[np.argmin(similarities)]
 
     # Otherwise, we use a slower matching, which tries various shifts.
-    def slow_similarity_metric(critter):
+    def slow_similarity_metric(critter: CritterImage) -> float:
         diffs = []
         for x in [-2, -1, 0, 1, 2]:
-            shifted = numpy.roll(icon, x, axis=1)
+            shifted = np.roll(icon, x, axis=1)
             diffs.append(cv2.absdiff(shifted, critter.img).sum())
-        return min(diffs)  # Return lowest diff across shifts.
+        return min(diffs)  # type: ignore[no-any-return]  # Return lowest diff across shifts.
 
     similarities = list(map(slow_similarity_metric, critters))
-    return critters[numpy.argmin(similarities)]
+    return critters[np.argmin(similarities)]
 
 
 if __name__ == "__main__":
-    results = scan("examples/critters.mp4")
+    results = scan(Path("examples/critters.mp4"))
     print("\n".join(results.items))

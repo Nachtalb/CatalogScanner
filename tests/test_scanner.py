@@ -12,8 +12,8 @@ from catalogscanner.common import ScanMode
 TEST_ASSETS = Path(__file__).parent / "assets"
 
 
-GROUND_TRUTH = json.loads((TEST_ASSETS / "expected/examples.json").read_text(encoding="utf-8"))  # type: ignore[no-any-return]
-GROUND_TRUTH_EXTRAS = json.loads((TEST_ASSETS / "expected/extra.json").read_text(encoding="utf-8"))  # type: ignore[no-any-return]
+GROUND_TRUTH = json.loads((TEST_ASSETS / "expected/examples.json").read_text(encoding="utf-8"))
+GROUND_TRUTH_EXTRAS = json.loads((TEST_ASSETS / "expected/extra.json").read_text(encoding="utf-8"))
 
 
 @contextmanager
@@ -91,7 +91,7 @@ class TestScanner:
 
 @pytest.mark.parametrize("filename", GROUND_TRUTH_EXTRAS.keys())
 def test_extra(filename: str) -> None:
-    filepath = str(TEST_ASSETS / "input/extra" / filename)
+    filepath = TEST_ASSETS / "input/extra" / filename
     try:
         results = scanner.scan_media(filepath)
         actual: Any = results.items

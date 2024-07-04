@@ -5,8 +5,8 @@ from typing import Any, Dict
 
 import cv2
 
-from . import catalog, critters, music, reactions, recipes, storage
-from .common import ScanResult
+from catalogscanner import catalog, critters, music, reactions, recipes, storage
+from catalogscanner.common import ScanResult
 
 SCANNERS: Dict[str, Any] = {
     "catalog": catalog,
@@ -20,8 +20,10 @@ SCANNERS: Dict[str, Any] = {
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
-def scan_media(filename: str | Path, mode: str = "auto", locale: str = "auto", for_sale: bool = False) -> ScanResult:
-    filename = str(filename)
+def scan_media(filename: Path, mode: str = "auto", locale: str = "auto", for_sale: bool = False) -> ScanResult:
+    if "%d" not in filename.name and not filename.is_file():
+        raise FileNotFoundError("File not found: %r" % filename)
+
     if mode == "auto":
         mode = _detect_media_type(filename)
         logging.info("Detected scan mode: %s", mode)
@@ -35,11 +37,11 @@ def scan_media(filename: str | Path, mode: str = "auto", locale: str = "auto", f
     if mode == "catalog":
         kwargs["for_sale"] = for_sale
 
-    return SCANNERS[mode].scan(filename, locale=locale, **kwargs)
+    return SCANNERS[mode].scan(filename, locale=locale, **kwargs)  # type: ignore[no-any-return]
 
 
-def _detect_media_type(filename: str) -> str:
-    video_capture = cv2.VideoCapture(filename)
+def _detect_media_type(filename: Path) -> str:
+    video_capture = cv2.VideoCapture(filename)  # type: ignore[call-overload]
 
     # Check the first 100 frames for a match.
     for _ in range(100):
@@ -48,7 +50,7 @@ def _detect_media_type(filename: str) -> str:
             break
 
         # Resize 1080p screenshots to 720p to match videos.
-        if filename.endswith(".jpg") and frame.shape[:2] == (1080, 1920):
+        if filename.suffix == ".jpg" and frame.shape[:2] == (1080, 1920):
             frame = cv2.resize(frame, (1280, 720))
 
         assert frame.shape[:2] == (720, 1280), "Invalid resolution: {1}x{0}".format(*frame.shape)
@@ -62,7 +64,7 @@ def _detect_media_type(filename: str) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Item scanner configuration")
-    parser.add_argument("media", help="The media file to scan.")
+    parser.add_argument("media", type=Path, help="The media file to scan.")
 
     parser.add_argument(
         "--locale", choices=list(catalog.LOCALE_MAP), default="auto", help="The locale to use for parsing item names."

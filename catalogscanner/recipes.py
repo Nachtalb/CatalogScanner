@@ -1,11 +1,12 @@
 import collections
 import functools
+from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
 import cv2
-import numpy
+import numpy as np
 
-from .common import ASSET_PATH, ScanMode, ScanResult, read_json_asset
+from catalogscanner.common import ASSET_PATH, FRAME_TYPE, ScanMode, ScanResult, read_json_asset
 
 # The expected color for the video background.
 BG_COLOR = (194, 222, 228)
@@ -24,27 +25,27 @@ RECIPE_PATH = ASSET_PATH / "recipes"
 class RecipeCard:
     """The image and data associated with a given recipe."""
 
-    def __init__(self, item_name, filename, color_id):
+    def __init__(self, item_name: str, filename: str, color_id: int) -> None:
         img_path = RECIPE_PATH / "generated" / filename
         self.img = cv2.imread(str(img_path))
         self.name = item_name
         self.color_id = color_id
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"RecipeCard({self.name!r}, {self.color_id!r})"
 
 
-def detect(frame: numpy.ndarray) -> bool:
+def detect(frame: FRAME_TYPE) -> bool:
     """Detects if a given frame is showing DIY recipes."""
     color = frame[:20, 1200:1240].mean(axis=(0, 1))
-    if numpy.linalg.norm(color - WOOD_COLOR) < 10:
+    if np.linalg.norm(color - WOOD_COLOR) < 10:
         raise AssertionError("Workbench scanning is not supported.")
-    if numpy.linalg.norm(color - KITCHEN_COLOR) < 10:
+    if np.linalg.norm(color - KITCHEN_COLOR) < 10:
         raise AssertionError("Kitchen scanning is not supported.")
-    return numpy.linalg.norm(color - BG_COLOR) < 10
+    return np.linalg.norm(color - BG_COLOR) < 10  # type: ignore[return-value]
 
 
-def scan(video_file: str, locale: str = "en-us") -> ScanResult:
+def scan(video_file: Path, locale: str = "en-us") -> ScanResult:
     """Scans a video of scrolling through recipes list and returns all recipes found."""
     recipe_cards = parse_video(video_file)
     recipe_names = match_recipes(recipe_cards)
@@ -57,9 +58,9 @@ def scan(video_file: str, locale: str = "en-us") -> ScanResult:
     )
 
 
-def parse_video(filename: str) -> List[numpy.ndarray]:
+def parse_video(filename: Path) -> List[FRAME_TYPE]:
     """Parses a whole video and returns images for all recipe cards found."""
-    all_cards: List[numpy.ndarray] = []
+    all_cards: List[FRAME_TYPE] = []
     for i, frame in enumerate(_read_frames(filename)):
         if i % 4 != 0:
             continue  # Skip every 4th frame
@@ -70,13 +71,13 @@ def parse_video(filename: str) -> List[numpy.ndarray]:
     return all_cards
 
 
-def match_recipes(recipe_cards: List[numpy.ndarray]) -> List[str]:
+def match_recipes(recipe_cards: List[FRAME_TYPE]) -> List[str]:
     """Matches icons against database of recipe images, finding best matches."""
     matched_recipes = set()
     for card in recipe_cards:
         # Check if the card is just the background color.
         card_center_color = card[28:84, 28:84].mean(axis=(0, 1))
-        if numpy.linalg.norm(card_center_color - BG_COLOR) < 5:
+        if np.linalg.norm(card_center_color - BG_COLOR) < 5:
             continue  # Skip blank card slots.
 
         possible_recipes = list(_get_candidate_recipes(card))
@@ -101,9 +102,9 @@ def translate_names(recipe_names: List[str], locale: str) -> List[str]:
     return [translations[name][locale] for name in recipe_names]
 
 
-def _read_frames(filename: str) -> Iterable[numpy.ndarray]:
+def _read_frames(filename: Path) -> Iterable[FRAME_TYPE]:
     """Parses frames of the given video and returns the relevant region."""
-    cap = cv2.VideoCapture(filename)
+    cap = cv2.VideoCapture(filename)  # type: ignore[call-overload]
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -119,7 +120,7 @@ def _read_frames(filename: str) -> Iterable[numpy.ndarray]:
     cap.release()
 
 
-def _parse_frame(frame: numpy.ndarray) -> Iterable[List[numpy.ndarray]]:
+def _parse_frame(frame: FRAME_TYPE) -> Iterable[List[FRAME_TYPE]]:
     """Parses an individual frame and extracts cards from the recipe list."""
     # Start/end horizontal position for the 5 recipe cards.
     x_positions = [(11, 123), (148, 260), (286, 398), (423, 535), (560, 672)]
@@ -127,8 +128,8 @@ def _parse_frame(frame: numpy.ndarray) -> Iterable[List[numpy.ndarray]]:
     # This code finds areas of the image that are beige (background color),
     # then it averages the frame across the Y-axis to find the area rows.
     # Lastly, it finds the y-positions marking the start/end of each row.
-    thresh = cv2.inRange(frame, (185, 215, 218), (210, 230, 237))
-    separators = numpy.nonzero(numpy.diff(thresh.mean(axis=1) > 195))[0]
+    thresh = cv2.inRange(frame, (185, 215, 218), (210, 230, 237))  # type: ignore[call-overload]
+    separators = np.nonzero(np.diff(thresh.mean(axis=1) > 195))[0]
 
     # We do a first pass finding all sensible y positions.
     y_positions = []
@@ -153,7 +154,7 @@ def _parse_frame(frame: numpy.ndarray) -> Iterable[List[numpy.ndarray]]:
         yield row
 
 
-def _is_duplicate_cards(all_cards: List[numpy.ndarray], new_cards: List[numpy.ndarray]) -> bool:
+def _is_duplicate_cards(all_cards: List[FRAME_TYPE], new_cards: List[FRAME_TYPE]) -> bool:
     """Checks if the new set of cards are the same as the previous seen cards."""
     if not new_cards or len(all_cards) < len(new_cards):
         return False
@@ -197,7 +198,7 @@ def _get_color_db() -> Dict[int, Tuple[int, int, int]]:
     return {int(color_id): (b, g, r) for color_id, (r, g, b) in colors_data.items()}
 
 
-def _get_candidate_recipes(card: numpy.ndarray) -> Iterable[RecipeCard]:
+def _get_candidate_recipes(card: FRAME_TYPE) -> Iterable[RecipeCard]:
     """Guesses the recipe color and returns all recipes the card could be"""
     color_db = _get_color_db()
     recipe_db = _get_recipe_db()
@@ -206,8 +207,8 @@ def _get_candidate_recipes(card: numpy.ndarray) -> Iterable[RecipeCard]:
     bg_color = card[104:107, 62:66, :].mean(axis=(0, 1))
 
     # Calculate how close each color is to the card's background color.
-    distance_func = lambda x: numpy.linalg.norm(bg_color - color_db[x])
-    color_distances = sorted((distance_func(c), c) for c in color_db)
+    distance_func = lambda x: np.linalg.norm(bg_color - color_db[x])  # noqa: E731
+    color_distances = sorted((distance_func(c), c) for c in color_db)  # type: ignore[no-untyped-call]
     for distance, color_id in color_distances:
         # Stop if the candidate is much worse than best candidate.
         if distance - color_distances[0][0] > 10:
@@ -215,31 +216,31 @@ def _get_candidate_recipes(card: numpy.ndarray) -> Iterable[RecipeCard]:
         yield from recipe_db[color_id]
 
 
-def _find_best_match(card: numpy.ndarray, recipes: List[RecipeCard]) -> RecipeCard:
+def _find_best_match(card: FRAME_TYPE, recipes: List[RecipeCard]) -> RecipeCard:
     """Finds the closest matching recipe for the given card."""
     if len(recipes) == 1:
         return recipes[0]
 
-    fast_similarity_metric = lambda r: cv2.absdiff(card, r.img).mean()
+    fast_similarity_metric = lambda r: cv2.absdiff(card, r.img).mean()  # noqa: E731
     similarities = list(map(fast_similarity_metric, recipes))
-    sim1, sim2 = numpy.partition(similarities, kth=min(2, len(recipes) - 1))[:2]
+    sim1, sim2 = np.partition(similarities, kth=min(2, len(recipes) - 1))[:2]
 
     # If the match seems obvious, return the quick result.
     if abs(sim1 - sim2) > 3:
-        return recipes[numpy.argmin(similarities)]
+        return recipes[np.argmin(similarities)]
 
     # Otherwise, we use a slower matching, which tries various shifts.
-    def slow_similarity_metric(recipe):
+    def slow_similarity_metric(recipe: RecipeCard) -> float:
         diffs = []
         for y in [-2, -1, 0, 1, 2]:
-            shifted = numpy.roll(card, y, axis=0)
+            shifted = np.roll(card, y, axis=0)
             diffs.append(cv2.absdiff(shifted, recipe.img).sum())
-        return min(diffs)  # Return lowest diff across shifts.
+        return min(diffs)  # type: ignore[no-any-return]  # Return lowest diff across shifts.
 
     similarities = list(map(slow_similarity_metric, recipes))
-    return recipes[numpy.argmin(similarities)]
+    return recipes[np.argmin(similarities)]
 
 
 if __name__ == "__main__":
-    results = scan("examples/recipes.mp4")
+    results = scan(Path("examples/recipes.mp4"))
     print("\n".join(results.items))

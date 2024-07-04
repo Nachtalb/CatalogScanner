@@ -1,11 +1,12 @@
 import functools
 import itertools
+from pathlib import Path
 from typing import Dict, Iterator, List, Optional
 
 import cv2
-import numpy
+import numpy as np
 
-from .common import ASSET_PATH, ScanMode, ScanResult, read_json_asset
+from catalogscanner.common import ASSET_PATH, FRAME_TYPE, ScanMode, ScanResult, read_json_asset
 
 # The expected color for the reactions background.
 BG_COLOR = (254, 221, 244)
@@ -69,23 +70,23 @@ REACTIONS_PATH = ASSET_PATH / "reactions"
 class ReactionImage:
     """The image and data associated with a reaction icon."""
 
-    def __init__(self, reaction_name: str, filename: str):
+    def __init__(self, reaction_name: str, filename: str) -> None:
         img_path = REACTIONS_PATH / "generated" / filename
         self.img = cv2.imread(str(img_path))
         self.reaction_name = reaction_name
         self.filename = filename
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"ReactionImage({self.reaction_name!r}, {self.filename!r})"
 
 
-def detect(frame: numpy.ndarray) -> bool:
+def detect(frame: FRAME_TYPE) -> bool:
     """Detects if a given frame is showing reactions list."""
     color = frame[370:380, 290:300].mean(axis=(0, 1))
-    return numpy.linalg.norm(color - BG_COLOR) < 5
+    return np.linalg.norm(color - BG_COLOR) < 5  # type: ignore[return-value]
 
 
-def scan(image_file: str, locale: str = "en-us") -> ScanResult:
+def scan(image_file: Path, locale: str = "en-us") -> ScanResult:
     """Scans an image of reactions list and returns all reactions found."""
     reaction_icons = parse_image(image_file)
     reaction_names = match_reactions(reaction_icons)
@@ -98,12 +99,12 @@ def scan(image_file: str, locale: str = "en-us") -> ScanResult:
     )
 
 
-def parse_image(filename: str) -> List[numpy.ndarray]:
+def parse_image(filename: Path) -> List[FRAME_TYPE]:
     """Parses a screenshot and returns icons for all reactions found."""
-    icon_pages: Dict[int, List[numpy.ndarray]] = {}
+    icon_pages: Dict[int, List[FRAME_TYPE]] = {}
     assertion_error: Optional[AssertionError] = None
 
-    cap = cv2.VideoCapture(filename)
+    cap = cv2.VideoCapture(filename)  # type: ignore[call-overload]
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -121,13 +122,13 @@ def parse_image(filename: str) -> List[numpy.ndarray]:
         except AssertionError as e:
             assertion_error = e
 
-    if assertion_error and (filename.endswith(".jpg") or not icon_pages):
+    if assertion_error and (filename.suffix == ".jpg" or not icon_pages):
         raise assertion_error
 
     return [icon for page in icon_pages.values() for icon in page]
 
 
-def match_reactions(reaction_icons: List[numpy.ndarray]) -> List[str]:
+def match_reactions(reaction_icons: List[FRAME_TYPE]) -> List[str]:
     """Matches icons against database of reactions images, finding best matches."""
     matched_reactions = set()
     reaction_db = _get_reaction_db()
@@ -146,14 +147,14 @@ def translate_names(reaction_names: List[str], locale: str) -> List[str]:
     return [translations[name][locale] for name in reaction_names]
 
 
-def _parse_frame(frame: numpy.ndarray) -> Iterator[numpy.ndarray]:
+def _parse_frame(frame: FRAME_TYPE) -> Iterator[FRAME_TYPE]:
     """Extracts the individual reaction icons from the frame."""
     for x, y in REACTION_POSITIONS:
         # Skip empty slots.
         center_color = frame[y - 6 : y + 6, x - 6 : x + 6].mean(axis=(0, 1))
-        if numpy.linalg.norm(center_color - EMPTY_COLOR) < 10:
+        if np.linalg.norm(center_color - EMPTY_COLOR) < 10:
             break
-        if numpy.linalg.norm(center_color - SELECT_COLOR) < 20:
+        if np.linalg.norm(center_color - SELECT_COLOR) < 20:
             break
 
         icon = frame[y - 32 : y + 32, x - 32 : x + 32]
@@ -177,28 +178,28 @@ def _get_reaction_db() -> List[ReactionImage]:
     return [ReactionImage(name, img) for name, img, _ in reaction_data]
 
 
-def _find_best_match(icon: numpy.ndarray, reactions: List[ReactionImage]) -> ReactionImage:
+def _find_best_match(icon: FRAME_TYPE, reactions: List[ReactionImage]) -> ReactionImage:
     """Finds the closest matching reaction for the given icon."""
-    fast_similarity_metric = lambda r: cv2.absdiff(icon, r.img).mean()
+    fast_similarity_metric = lambda r: cv2.absdiff(icon, r.img).mean()  # noqa: E731
     similarities = list(map(fast_similarity_metric, reactions))
-    sim1, sim2 = numpy.partition(similarities, kth=2)[:2]
+    sim1, sim2 = np.partition(similarities, kth=2)[:2]
 
     # If the match seems obvious, return the quick result.
     if abs(sim1 - sim2) > 3:
-        return reactions[numpy.argmin(similarities)]
+        return reactions[np.argmin(similarities)]
 
     # Otherwise, we use a slower matching, which tries various shifts.
-    def slow_similarity_metric(reaction):
+    def slow_similarity_metric(reaction: ReactionImage) -> float:
         diffs = []
         for x, y in itertools.product([-1, 0, 1], repeat=2):
-            shifted = numpy.roll(numpy.roll(icon, x, axis=1), y, axis=0)
+            shifted = np.roll(np.roll(icon, x, axis=1), y, axis=0)
             diffs.append(cv2.absdiff(shifted, reaction.img).sum())
-        return min(diffs)  # Return lowest diff across shifts.
+        return min(diffs)  # type: ignore[no-any-return]  # Return lowest diff across shifts.
 
     similarities = list(map(slow_similarity_metric, reactions))
-    return reactions[numpy.argmin(similarities)]
+    return reactions[np.argmin(similarities)]
 
 
 if __name__ == "__main__":
-    results = scan("examples/reactions.jpg")
+    results = scan(Path("examples/reactions.jpg"))
     print("\n".join(results.items))

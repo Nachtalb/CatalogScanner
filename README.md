@@ -1,4 +1,5 @@
 <!-- markdownlint-disable MD033 -->
+<!-- markdownlint-disable MD036 -->
 <!-- markdownlint-disable MD013 -->
 
 # CatalogScanner [![Python version](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/) [![License: LGPL-3.0](https://img.shields.io/badge/License-LGPL--3.0-yellow.svg)](https://opensource.org/licenses/LGPL)
@@ -101,6 +102,9 @@ To use the scanner, first record a video or take screenshots of what you want to
 scan. Then, simply send the video or screenshot to the bot. You'll receive a
 list of items that you can import into your tracker.
 
+These instructions are also available
+[here](https://telegra.ph/Animal-Crossing-New-Horizons-Catalog-Scanner-07-05)
+
 <details>
 <summary>🛍️ Nook Shopping</summary>
 
@@ -115,7 +119,9 @@ list of items that you can import into your tracker.
 8. Send the video to the Telegram bot
    [@ACNHScannerBot](https://t.me/ACNHScannerBot)
 
-![Scrolling through furniture catalog](https://telegra.ph/file/d5082ff835b192b4a6e0d.mp4)
+[![Scrolling through furniture catalog](docs/images/gifs/nook-shopping.gif)](docs/images/videos/nook-shopping.mp4)
+
+_Click the GIF to view the full video_
 
 </details>
 
@@ -132,7 +138,9 @@ list of items that you can import into your tracker.
 7. Send the video to the Telegram bot
    [@ACNHScannerBot](https://t.me/ACNHScannerBot)
 
-![Scrolling through DIY Recipes](https://telegra.ph/file/335e3528de22f72a053e6.mp4)
+[![Scrolling through DIY Recipes](docs/images/gifs/diy-recipes.gif)](docs/images/videos/diy-recipes.mp4)
+
+_Click the GIF to view the full video_
 
 </details>
 
@@ -150,7 +158,9 @@ list of items that you can import into your tracker.
 8. Send the video to the Telegram bot
    [@ACNHScannerBot](https://t.me/ACNHScannerBot)
 
-![Moving through Critterpedia](https://telegra.ph/file/c1027c76aa0236fc19a4c.mp4)
+[![Moving through Critterpedia](docs/images/gifs/critterpedia.gif)](docs/images/videos/critterpedia.mp4)
+
+_Click the GIF to view the full video_
 
 </details>
 
@@ -167,7 +177,9 @@ list of items that you can import into your tracker.
 7. Send the video to the Telegram bot
    [@ACNHScannerBot](https://t.me/ACNHScannerBot)
 
-![Scrolling through the song list](https://telegra.ph/file/eca8791d51058df1190bf.mp4)
+[![Scrolling through the song list](docs/images/gifs/music.gif)](docs/images/videos/music.mp4)
+
+_Click the GIF to view the full video_
 
 </details>
 
@@ -184,7 +196,7 @@ list of items that you can import into your tracker.
 7. Send the screenshot to the Telegram bot
    [@ACNHScannerBot](https://t.me/ACNHScannerBot)
 
-![Screenshot of first Reactions page](https://telegra.ph/file/592668b6120953c1316b5.png)
+![Screenshot of first Reactions page](docs/images/reactions.png)
 
 </details>
 

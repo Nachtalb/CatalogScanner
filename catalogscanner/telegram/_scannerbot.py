@@ -21,11 +21,16 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(level
 
 class ScannerBot:
     def __init__(
-        self, admins: list[int | str] = [], local_mode: bool = False, hastebin_host: str = "https://bin.naa.gg/"
+        self,
+        admins: list[int | str] = [],
+        lock_to_admins: bool = True,
+        local_mode: bool = False,
+        hastebin_host: str = "https://bin.naa.gg/",
     ) -> None:
         self.logger = logging.getLogger(__name__)
         self.local_mode = local_mode
-        self.admins = [int(admin) for admin in admins]
+        self.admins = [int(admin) for admin in admins if isinstance(admin, int) or admin.isdigit()]
+        self.lock_to_admins = lock_to_admins
 
         self.httpx_client: AsyncClient = None  # type: ignore[assignment]
         self.hastebin_host = hastebin_host.rstrip("/")
@@ -35,7 +40,7 @@ class ScannerBot:
         file_filter = filters.PHOTO | filters.VIDEO | filters.Document.IMAGE | filters.Document.VIDEO
         admin_filter = None
 
-        if self.admins:
+        if self.lock_to_admins and self.admins:
             user_filters = [filters.User(user) for user in self.admins]
             multi_user_filter = user_filters[0]
             if len(user_filters) > 1:

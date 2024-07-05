@@ -17,7 +17,8 @@ def bot_main() -> None:
     # Typical local path: "http://localhost:8081/bot"
     parser.add_argument("--base-url", default=TG_BASE_URL, help="Base URL for the bot API")
     parser.add_argument("--local-mode", action="store_true", help="Run the bot in local mode", default=False)
-    parser.add_argument("--admins", required=True, help="List of admin ids, separated by commas.")
+    parser.add_argument("--admins", help="List of admin ids, separated by commas.", default="")
+    parser.add_argument("--lock", action="store_true", help="Lock the bot to the configured admins", default=False)
 
     sub_parsers = parser.add_subparsers()
     webhook_parser = sub_parsers.add_parser("webhook")
@@ -30,7 +31,7 @@ def bot_main() -> None:
 
     args = parser.parse_args()
 
-    bot = ScannerBot(admins=args.admins.split(","), local_mode=args.local_mode)
+    bot = ScannerBot(admins=args.admins.split(","), local_mode=args.local_mode, lock_to_admins=args.lock)
 
     persistence = PicklePersistence(filepath="scanner_bot.dat")
     app = (

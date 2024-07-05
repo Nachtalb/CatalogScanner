@@ -6,6 +6,11 @@ authors = ["Nachtalb <na@nachtalb.io>", "EhsanKia <contact@ehsankia.com>"]
 license = "LGPL-3.0"
 readme = "README.md"
 
+[tool.poetry.scripts]
+catalogscanner = "catalogscanner.scanner:main"
+catalogscanner-bot = "catalogscanner.telegram.bot:main"
+
+
 [tool.poetry.dependencies]
 python = "^3.12"
 imagehash = "^4.3.1"
@@ -31,6 +36,10 @@ types-pillow = "^10.2.0.20240520"
 [tool.poetry.group.test.dependencies]
 pytest = "^8.2.2"
 pytest-xdist = "^3.6.1"
+
+
+[tool.poetry.group.bot.dependencies]
+python-telegram-bot = { extras = ["all"], version = "^21.3" }
 
 [build-system]
 requires = ["poetry-core"]

@@ -2,7 +2,7 @@
 <!-- markdownlint-disable MD036 -->
 <!-- markdownlint-disable MD013 -->
 
-# CatalogScanner [![Python version](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/) [![License: LGPL-3.0](https://img.shields.io/badge/License-LGPL--3.0-yellow.svg)](https://opensource.org/licenses/LGPL)
+# CatalogScanner [![Python version](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/) [![License: LGPL-3.0](https://img.shields.io/badge/License-LGPL--3.0-yellow.svg)](https://opensource.org/licenses/LGPL-3.0)
 
 <!-- markdownlint-enable MD013 -->
 

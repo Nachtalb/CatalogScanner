@@ -6,7 +6,9 @@ from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from httpx import AsyncClient
 from telegram import Document, File, PhotoSize, Update, Video
+from telegram.constants import ParseMode
 from telegram.error import BadRequest
 from telegram.ext import Application, CommandHandler, ContextTypes, ExtBot, MessageHandler, filters
 
@@ -18,11 +20,15 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(level
 
 
 class ScannerBot:
-    def __init__(self, admins: list[int | str] = [], local_mode: bool = False) -> None:
+    def __init__(
+        self, admins: list[int | str] = [], local_mode: bool = False, hastebin_host: str = "https://bin.naa.gg/"
+    ) -> None:
         self.logger = logging.getLogger(__name__)
         self.local_mode = local_mode
         self.admins = [int(admin) for admin in admins]
 
+        self.httpx_client: AsyncClient = None  # type: ignore[assignment]
+        self.hastebin_host = hastebin_host.rstrip("/")
         self.bot: ExtBot = None  # type: ignore[type-arg, assignment]
 
     def setup_hooks(self, application: Application) -> None:  # type: ignore[type-arg]
@@ -56,6 +62,14 @@ class ScannerBot:
         <a href="https://telegra.ph/Animal-Crossing-New-Horizons-Catalog-Scanner-07-05"><b>➡️➡️ Instructions ⬅️⬅️</b></a>"""
 
         await update.message.reply_text(sel(text), parse_mode="HTML")
+
+    async def upload_result_to_hastebin(self, result: ScanResult) -> str:
+        data = "\n".join(result.items)
+
+        response = await self.httpx_client.post(self.hastebin_host + "/documents", content=data.encode("utf-8"))
+        response.raise_for_status()
+
+        return self.hastebin_host + "/raw/" + response.json()["key"]  # type: ignore[no-any-return]
 
     async def prepare_file_for_download(self, media: PhotoSize | Video | Document) -> File:
         if not media.file_size:
@@ -122,14 +136,27 @@ class ScannerBot:
             result_file = Path(temp_dir) / "result.txt"
             result_file.write_text("\n".join(result.items))
 
+            try:
+                hastebin_url = await self.upload_result_to_hastebin(result)
+            except Exception as e:
+                self.logger.error(f"Failed to upload result to hastebin, error: {e}")
+                hastebin_url = None
+
             caption = f"Mode: {result.mode.name}\nLocale: {result.locale}\nTotal: {len(result.items)}\nUnmatched: {len(result.unmatched)}"
+            if hastebin_url:
+                caption += f"\n\n<a href='{hastebin_url}'>📋 View full result online</a>"
 
             try:
                 await answer.delete()
             except BadRequest:
                 pass
 
-            await update.message.reply_document(result_file, caption=caption)
+            await update.message.reply_document(
+                result_file,
+                caption=caption,
+                reply_to_message_id=reply_message_id,
+                parse_mode=ParseMode.HTML,
+            )
 
     async def scan_media(self, path: Path) -> ScanResult:
         return await asyncio.to_thread(scan_media, path)
@@ -151,6 +178,7 @@ class ScannerBot:
     async def post_init(self, app: Application) -> None:  # type: ignore[type-arg]
         self.app = app
         self.bot = app.bot
+        self.httpx_client = AsyncClient()
 
         await self.bot.set_my_commands([("start", "Start the bot")])
 
@@ -161,6 +189,7 @@ class ScannerBot:
                 self.logger.error(f"Failed to send message to admin: {admin}, error: {e}")
 
     async def post_stop(self, app: Application) -> None:  # type: ignore[type-arg]
+        await self.httpx_client.aclose()
         for admin in self.admins:
             try:
                 await self.bot.send_message(admin, "Bot stopped!")

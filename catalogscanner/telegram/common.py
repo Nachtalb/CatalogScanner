@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Copyright (c) 2024 Nachtalb
 TG_BASE_URL = "https://api.telegram.org/bot"
 
 TG_MAX_DOWNLOAD_SIZE = 20 * 1024 * 1024  # 20 MB

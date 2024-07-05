@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2020 Ehsan Kia
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Copyright (c) 2024 Nachtalb
+# This file contains both MIT and LGPL-3.0-or-later licensed code.
 import collections
 import enum
 import functools

@@ -209,3 +209,15 @@ The item name data comes from:
 - <https://tinyurl.com/acnh-sheet>
 - <https://github.com/imthe666st/ACNH>
 - <https://github.com/alexislours/translation-sheet-data>
+
+## Licensing
+
+This project is dual-licensed:
+
+- Original work: MIT License ([LICENSE-MIT](LICENSE-MIT))
+- Modifications and new files: GNU Lesser General Public License v3.0
+  ([LICENSE](LICENSE))
+
+Individual files contain SPDX license identifiers indicating applicable
+license(s). When using or distributing this software, please comply with both
+licenses.

@@ -1,9 +1,10 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2020 Ehsan Kia
 import datetime
 import difflib
 import json
 import os
 import sys
-
 from dataclasses import dataclass
 from typing import Optional, Sequence, Set
 
@@ -47,7 +48,6 @@ class Rectangle:
 
 
 class VariationParser:
-
     def __init__(self):
         self.tesseract = PyTessBaseAPI(path="./", psm=PSM.SINGLE_LINE)
         with open("en-us-var.json", encoding="utf-8") as fp:
